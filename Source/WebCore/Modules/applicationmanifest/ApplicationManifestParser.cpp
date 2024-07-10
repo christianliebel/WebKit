@@ -102,6 +102,7 @@ ApplicationManifest ApplicationManifestParser::parseManifest(const JSON::Object&
     parsedManifest.rawJSON = text;
     parsedManifest.manifestURL = manifestURL;
     parsedManifest.startURL = parseStartURL(manifest, documentURL);
+    parsedManifest.dir = parseDir(manifest);
     parsedManifest.display = parseDisplay(manifest);
     parsedManifest.name = parseName(manifest);
     parsedManifest.description = parseDescription(manifest);
@@ -171,6 +172,32 @@ URL ApplicationManifestParser::parseStartURL(const JSON::Object& manifest, const
     }
 
     return startURL;
+}
+
+ApplicationManifest::Direction ApplicationManifestParser::parseDir(const JSON::Object& manifest)
+{
+    auto value = manifest.getValue("dir"_s);
+    if (!value)
+        return ApplicationManifest::Direction::Auto;
+
+    auto stringValue = value->asString();
+    if (!stringValue) {
+        logManifestPropertyNotAString("dir"_s);
+        return ApplicationManifest::Direction::Auto;
+    }
+
+    static constexpr std::pair<ComparableLettersLiteral, ApplicationManifest::Direction> directionMappings[] = {
+        { "auto", ApplicationManifest::Direction::Auto },
+        { "ltr", ApplicationManifest::Direction::Ltr },
+        { "rtl", ApplicationManifest::Direction::Rtl },
+    };
+    static constexpr SortedArrayMap directions { directionMappings };
+
+    if (auto* dirValue = directions.tryGet(StringView(stringValue).trim(isUnicodeCompatibleASCIIWhitespace<UChar>)))
+        return *dirValue;
+
+    logDeveloperWarning(makeString("\""_s, stringValue, "\" is not a valid dir."_s));
+    return ApplicationManifest::Direction::Auto;
 }
 
 ApplicationManifest::Display ApplicationManifestParser::parseDisplay(const JSON::Object& manifest)

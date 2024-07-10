@@ -36,6 +36,18 @@
 using namespace WebCore;
 
 namespace WebCore {
+static inline std::ostream& operator<<(std::ostream& os, const ApplicationManifest::Direction& direction)
+{
+    switch (direction) {
+    case ApplicationManifest::Direction::Auto:
+        return os << "ApplicationManifest::Direction::Auto";
+    case ApplicationManifest::Direction::Ltr:
+        return os << "ApplicationManifest::Direction::Ltr";
+    case ApplicationManifest::Direction::Rtl:
+        return os << "ApplicationManifest::Direction::Rtl";
+    }
+}
+
 static inline std::ostream& operator<<(std::ostream& os, const ApplicationManifest::Display& display)
 {
     switch (display) {
@@ -168,6 +180,13 @@ public:
         auto manifest = parseTopLevelProperty("start_url"_s, rawJSON);
         auto value = manifest.startURL;
         EXPECT_STREQ(expectedValue.string().utf8().data(), value.string().utf8().data());
+    }
+
+    void testDir(const String& rawJSON, ApplicationManifest::Direction expectedValue)
+    {
+        auto manifest = parseTopLevelProperty("dir"_s, rawJSON);
+        auto value = manifest.dir;
+        EXPECT_EQ(expectedValue, value);
     }
 
     void testDisplay(const String& rawJSON, ApplicationManifest::Display expectedValue)
@@ -442,6 +461,22 @@ TEST_F(ApplicationManifestParserTest, StartURL)
     m_manifestURL = URL { "https://example.com/dir3/manifest.json"_s };
 
     testStartURL("\"../page2\""_s, "https://example.com/page2"_s);
+}
+
+TEST_F(ApplicationManifestParserTest, Dir)
+{
+    testDir("123"_s, ApplicationManifest::Direction::Auto);
+    testDir("null"_s, ApplicationManifest::Direction::Auto);
+    testDir("true"_s, ApplicationManifest::Direction::Auto);
+    testDir("{ }"_s, ApplicationManifest::Direction::Auto);
+    testDir("[ ]"_s, ApplicationManifest::Direction::Auto);
+    testDir("\"\""_s, ApplicationManifest::Direction::Auto);
+    testDir("\"garbage string\""_s, ApplicationManifest::Direction::Auto);
+
+    testDir("\"auto\""_s, ApplicationManifest::Direction::Auto);
+    testDir("\"ltr\""_s, ApplicationManifest::Direction::Ltr);
+    testDir("\"rtl\""_s, ApplicationManifest::Direction::Rtl);
+    testDir("\"\t\nLTR \""_s, ApplicationManifest::Direction::Ltr);
 }
 
 TEST_F(ApplicationManifestParserTest, Display)
